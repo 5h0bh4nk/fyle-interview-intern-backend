@@ -5,6 +5,7 @@ from core.libs import helpers, assertions
 from core.models.teachers import Teacher
 from core.models.students import Student
 from sqlalchemy.types import Enum as BaseEnum
+from marshmallow.exceptions import ValidationError
 
 
 class GradeEnum(str, enum.Enum):
@@ -12,6 +13,10 @@ class GradeEnum(str, enum.Enum):
     B = 'B'
     C = 'C'
     D = 'D'
+
+    @classmethod
+    def is_valid_grade(cls, key):
+        return key in cls.__members__
 
 
 class AssignmentStateEnum(str, enum.Enum):
@@ -65,6 +70,7 @@ class Assignment(db.Model):
         assertions.assert_found(assignment, 'No assignment with this id was found')
         assertions.assert_valid(assignment.student_id == principal.student_id, 'This assignment belongs to some other student')
         assertions.assert_valid(assignment.content is not None, 'assignment with empty content cannot be submitted')
+        assertions.assert_valid(assignment.state == AssignmentStateEnum.DRAFT, 'only a draft assignment can be submitted')
 
         assignment.teacher_id = teacher_id
         assignment.state = AssignmentStateEnum.SUBMITTED
@@ -75,3 +81,25 @@ class Assignment(db.Model):
     @classmethod
     def get_assignments_by_student(cls, student_id):
         return cls.filter(cls.student_id == student_id).all()
+
+    @classmethod
+    def get_assignments_by_teacher(cls, teacher_id):
+        return cls.filter(cls.teacher_id == teacher_id).all()
+
+    @classmethod
+    def grade_assignment(cls, _id, grade, principal: Principal):
+        assignment = Assignment.get_by_id(_id)
+        assertions.assert_found(assignment, 'No assignment with this id was found')
+        assertions.assert_valid(assignment.teacher_id == principal.teacher_id, 'This assignment is assigned to other teacher')
+        assertions.assert_valid(assignment.content is not None, 'Assignment with empty content cannot be graded')
+        assertions.assert_valid(assignment.state == AssignmentStateEnum.SUBMITTED, 'Only submitted assignments can be graded')
+
+        if not GradeEnum.is_valid_grade(grade):
+            raise ValidationError(message='This grade is invallid')
+
+        assignment.grade = grade
+        assignment.state = AssignmentStateEnum.GRADED
+        db.session.flush()
+
+        return assignment
+
