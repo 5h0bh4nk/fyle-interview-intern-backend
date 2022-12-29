@@ -131,35 +131,3 @@ def test_grade_assignment_2_teacher_2(client, h_teacher_2):
 
     assert data['state'] == "GRADED"
     assert data['grade'] == "D"
-
-def test_grade_assignment_3_teacher_2(client, h_teacher_2):
-    response = client.post(
-        '/teacher/assignments/grade',
-        headers=h_teacher_2,
-        json={
-            "id":3,
-            "grade":"B"
-        }
-    )
-
-    assert response.status_code == 200
-    data = response.json['data']
-
-    assert data['state'] == "GRADED"
-    assert data['grade'] == "B"
-
-def test_grade_assignment_4_teacher_2(client, h_teacher_2):
-    response = client.post(
-        '/teacher/assignments/grade',
-        headers=h_teacher_2,
-        json={
-            "id":4,
-            "grade":"C"
-        }
-    )
-
-    assert response.status_code == 200
-    data = response.json['data']
-
-    assert data['state'] == "GRADED"
-    assert data['grade'] == "C"
